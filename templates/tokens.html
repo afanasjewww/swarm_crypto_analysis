@@ -6,7 +6,7 @@
     <title>Crypto Token Search</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #121212;
             color: #e0e0e0;
             margin: 20px;
@@ -29,7 +29,7 @@
             padding: 15px;
             background-color: #1e1e1e;
             border-radius: 10px;
-            box-shadow: 0px 0px 15px rgba(187, 134, 252, 0.3);
+            box-shadow: 0 0 15px rgba(187, 134, 252, 0.3);
         }
 
         .search-container input {
@@ -37,7 +37,6 @@
             padding: 10px;
             border: 1px solid #bb86fc;
             border-radius: 5px;
-            font-size: 16px;
             background-color: #292929;
             color: #e0e0e0;
         }
@@ -56,46 +55,31 @@
             background-color: #9b67e6;
         }
 
-               /* Добавляем границы таблицы */
         table {
             width: 95%;
-            font-size: 16px;
             margin: 10px auto;
-            border-collapse: collapse; /* Границы объединены */
+            border-collapse: collapse;
         }
 
         th, td {
             padding: 5px;
-            white-space: nowrap;
-            font-size: auto;
-            border: 1px solid #666; /* Серые границы */
+            border: 1px solid #666;
+            text-align: left;
         }
 
         th {
-            background-color: #222; /* Темный фон заголовка */
-            color: #bb86fc; /* Цвет текста заголовка */
+            background-color: #222;
+            color: #bb86fc;
         }
 
         img {
             width: 25px;
         }
 
-        /* Делаем текст в последней колонке меньше */
-        td:nth-child(6) {
-            font-size: 16px;
-            line-height: 1.2;
-        }
-
         .details-container, .market-data-container {
             display: flex;
-            flex-direction: column; /* Располагаем элементы вертикально */
-            font-size: 16px; /* Делаем текст компактнее */
-            gap: 5px; /* Отступ между строками */
-        }
-
-        td:nth-child(6), td:nth-child(7) {
-            vertical-align: top; /* Выравниваем данные в верхней части ячейки */
-            text-align: left; /* Выравниваем текст влево */
+            flex-direction: column;
+            gap: 5px;
         }
 
         .analysis-container {
@@ -103,13 +87,8 @@
             padding: 15px;
             background-color: #1e1e1e;
             border-radius: 10px;
-            box-shadow: 0px 0px 15px rgba(187, 134, 252, 0.3);
+            box-shadow: 0 0 15px rgba(187, 134, 252, 0.3);
             text-align: left;
-        }
-
-        .analysis-container p {
-            font-size: 16px;
-            color: #e0e0e0;
         }
     </style>
     <script>
@@ -121,16 +100,6 @@
                 window.location.href = "/search?query=" + encodeURIComponent(query);
             }
         }
-
-        function toggleDetails(id) {
-            let details = document.getElementById("details-" + id);
-            if (details.style.display === "none" || details.style.display === "") {
-                details.style.display = "table-row";
-            } else {
-                details.style.display = "none";
-            }
-        }
-
     </script>
 </head>
 <body>
@@ -160,7 +129,6 @@
                 <th>Market Cap (USD)</th>
                 <th>Logo</th>
                 <th>Details</th>
-                <th>Market Data</th>
             </tr>
             {% for token in results %}
             <tr>
@@ -169,36 +137,28 @@
                 <td>{{ "%.2f"|format(token.usdPrice) if token.usdPrice is not none else '-' }}</td>
                 <td>{{ "%.2f"|format(token.get("marketCap", 0)) if token.get("marketCap") is not none else '-' }}</td>
                 <td><img src="{{ token.logo }}" alt="Logo"></td>
-                <td>
-                    <div class="details-container">
-                        <div><strong>Address:</strong> {{ token.tokenAddress }}</div>
-                        <div><strong>Chain ID:</strong> {{ token.chainId }}</div>
-                        <div><strong>Buyers (24h):</strong> {{ token.experiencedNetBuyers.oneDay if token.experiencedNetBuyers else '-' }}</div>
-                    </div>
+                <td class="details-container">
+                    <div><strong>Address:</strong> {{ token.tokenAddress }}</div>
+                    <div><strong>Chain ID:</strong> {{ token.chainId }}</div>
+                    <div><strong>Buyers (24h):</strong> {{ token.experiencedNetBuyers.oneDay if token.experiencedNetBuyers else '-' }}</div>
                 </td>
-                <td>
-                    <div class="market-data-container">
-                        <div><strong>Price Change (24h):</strong> {{ token.usdPricePercentChange.oneDay if token.usdPricePercentChange else '-' }} %</div>
-                        <div><strong>Volume (24h):</strong> {{ token.volumeUsd.oneDay if token.volumeUsd else '-' }} USD</div>
-                        <div><strong>Liquidity Change (24h):</strong> {{ token.liquidityChangeUSD.oneDay if token.liquidityChangeUSD else '-' }} USD</div>
-                    </div>
+                <td class="market-data-container">
+                    <div><strong>Price Change (24h):</strong> {{ token.usdPricePercentChange.oneDay if token.usdPricePercentChange else '-' }} %</div>
+                    <div><strong>Volume (24h):</strong> {{ token.volumeUsd.oneDay if token.volumeUsd else '-' }} USD</div>
+                    <div><strong>Liquidity Change (24h):</strong> {{ token.liquidityChangeUSD.oneDay if token.liquidityChangeUSD else '-' }} USD</div>
                 </td>
             </tr>
-
-{% endfor %}
-
+            {% endfor %}
         </table>
     {% endif %}
 
     {% if analysis %}
         <h2>🔍 AI Token Analysis</h2>
         <div class="analysis-container">
-            <p><strong>Orchestrator:</strong> {{ analysis.orchestrator }}</p>
-            <p><strong>Token Address:</strong> {{ analysis.moralis_analysis.token }}</p>
-            <p><strong>USD Price:</strong> {{ analysis.moralis_analysis.usd_price }}</p>
-            <p><strong>Recommended Action:</strong> <span style="color: #bb86fc;">{{ analysis.recommended_action }}</span></p>
+            <p><strong>Общий вердикт:</strong> <span style="color: #bb86fc;">{{ analysis.get('decision', 'N/A') }}</span></p>
+            <p><strong>Факторы риска:</strong> {{ analysis.get('risk_factors', 'N/A') }}</p>
+            <p><strong>Основные выводы:</strong> {{ analysis.get('summary', 'N/A') }}</p>
         </div>
     {% endif %}
-
 </body>
 </html>

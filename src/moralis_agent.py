@@ -1,27 +1,42 @@
+import logging
+from swarm import Swarm, Agent
 import asyncio
-from src.agent_base import BaseCryptoAgent
-from src.moralis_client import fetch_token_price, fetch_token_metadata
 
-class MoralisAgent(BaseCryptoAgent):
-    """Агент, анализирующий данные из Moralis API"""
+logger = logging.getLogger(__name__)
 
-    token_address: str
+class MoralisAgent:
+    def __init__(self, token_info: dict):
+        """Agent receives token data and processes it using Swarm."""
+        self.token_info = token_info
+        self.client = Swarm()  # Creating a Swarm client
+        self.agent = Agent(
+            name="CryptoAnalysisAgent",
+            instructions="You are a cryptocurrency analyst. Analyze the given token data and provide a short but accurate summary, highlighting key risks and trends.",
+        )
 
-    async def run(self):
-        price_data = await fetch_token_price(self.token_address)
-        metadata = await fetch_token_metadata(self.token_address)
+    async def analyze(self):
+        """Runs token analysis through Swarm."""
+        try:
+            prompt = self._generate_prompt()
+            logger.info(f"Sending prompt to agent: {prompt}")
 
-        report = {
-            "agent": self.name,
-            "token": self.token_address,
-            "usd_price": price_data.get("usdPrice", "Unknown"),
-            "native_price": price_data.get("nativePrice", {}).get("value", "Unknown"),
-            "market_cap": metadata.get("marketCap", "Unknown"),
-            "volume_24h": metadata.get("volume24h", "Unknown"),
-            "price_change_24h": metadata.get("priceChange24h", "Unknown"),
-            "holders_count": metadata.get("holdersCount", "Unknown"),
-            "liquidity": metadata.get("liquidity", "Unknown"),
-        }
+            # Running analysis in a separate thread
+            response = await asyncio.to_thread(self.client.run, self.agent, [{"role": "user", "content": prompt}])
+            return response.messages[-1]["content"]  # Returning the last agent response
 
-        print(f"📊 MoralisAgent Report: {report}")
-        return report
+        except Exception as e:
+            logger.error(f"Error analyzing token {self.token_info.get('symbol')}: {e}", exc_info=True)
+            return "Analysis error, data unavailable."
+
+    def _generate_prompt(self):
+        """Generates an English-language prompt based on token data."""
+        return (
+            f"Token: {self.token_info.get('name')} ({self.token_info.get('symbol')})\n"
+            f"Price: {self.token_info.get('usdPrice')} USD\n"
+            f"Market Cap: {self.token_info.get('marketCap')} USD\n"
+            f"24h Price Change: {self.token_info.get('usdPricePercentChange', {}).get('oneDay', 'No data')}%\n"
+            f"24h Trading Volume: {self.token_info.get('volumeUsd', {}).get('oneDay', 'No data')} USD\n"
+            f"Security Score: {self.token_info.get('securityScore', 'No data')}/100\n\n"
+            f"Analyze this token and provide a summary of its reliability and future prospects. "
+            f"Highlight any risks or trends that should be considered."
+        )
