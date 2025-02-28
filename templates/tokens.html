@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Token Search</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 20px;
+            text-align: center;
+        }
+
+        h1, h2 {
+            color: #bb86fc;
+        }
+
+        .error-message {
+            color: #ff4d4d;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .search-container {
+            margin: 20px auto;
+            width: 50%;
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(187, 134, 252, 0.3);
+        }
+
+        .search-container input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #bb86fc;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #292929;
+            color: #e0e0e0;
+        }
+
+        .search-container button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #bb86fc;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-container button:hover {
+            background-color: #9b67e6;
+        }
+
+               /* Добавляем границы таблицы */
+        table {
+            width: 95%;
+            font-size: 16px;
+            margin: 10px auto;
+            border-collapse: collapse; /* Границы объединены */
+        }
+
+        th, td {
+            padding: 5px;
+            white-space: nowrap;
+            font-size: auto;
+            border: 1px solid #666; /* Серые границы */
+        }
+
+        th {
+            background-color: #222; /* Темный фон заголовка */
+            color: #bb86fc; /* Цвет текста заголовка */
+        }
+
+        img {
+            width: 25px;
+        }
+
+        /* Делаем текст в последней колонке меньше */
+        td:nth-child(6) {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .details-container, .market-data-container {
+            display: flex;
+            flex-direction: column; /* Располагаем элементы вертикально */
+            font-size: 16px; /* Делаем текст компактнее */
+            gap: 5px; /* Отступ между строками */
+        }
+
+        td:nth-child(6), td:nth-child(7) {
+            vertical-align: top; /* Выравниваем данные в верхней части ячейки */
+            text-align: left; /* Выравниваем текст влево */
+        }
+
+        .analysis-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(187, 134, 252, 0.3);
+            text-align: left;
+        }
+
+        .analysis-container p {
+            font-size: 16px;
+            color: #e0e0e0;
+        }
+    </style>
+    <script>
+        function searchToken() {
+            let query = document.getElementById("tokenInput").value.trim();
+            if (query.length < 2) {
+                document.getElementById("errorMsg").innerText = "🚨 Query too short. Please enter at least 2 characters.";
+            } else {
+                window.location.href = "/search?query=" + encodeURIComponent(query);
+            }
+        }
+
+        function toggleDetails(id) {
+            let details = document.getElementById("details-" + id);
+            if (details.style.display === "none" || details.style.display === "") {
+                details.style.display = "table-row";
+            } else {
+                details.style.display = "none";
+            }
+        }
+
+    </script>
+</head>
+<body>
+    <h1>Crypto Token Search</h1>
+
+    <div class="search-container">
+        <input type="text" id="tokenInput" placeholder="Enter token name or symbol...">
+        <button onclick="searchToken()">Search</button>
+    </div>
+
+    <p id="errorMsg" class="error-message"></p>
+
+    {% if error_message %}
+        <p class="error-message">🚨 {{ error_message }}</p>
+    {% endif %}
+
+    {% if not_found %}
+        <p class="error-message">🚨 Token "{{ query }}" not found! Try another one.</p>
+    {% else %}
+        <h2>Token Search Results: "{{ query }}"</h2>
+
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Symbol</th>
+                <th>Price (USD)</th>
+                <th>Market Cap (USD)</th>
+                <th>Logo</th>
+                <th>Details</th>
+                <th>Market Data</th>
+            </tr>
+            {% for token in results %}
+            <tr>
+                <td>{{ token.name }}</td>
+                <td>{{ token.symbol }}</td>
+                <td>{{ "%.2f"|format(token.usdPrice) if token.usdPrice is not none else '-' }}</td>
+                <td>{{ "%.2f"|format(token.get("marketCap", 0)) if token.get("marketCap") is not none else '-' }}</td>
+                <td><img src="{{ token.logo }}" alt="Logo"></td>
+                <td>
+                    <div class="details-container">
+                        <div><strong>Address:</strong> {{ token.tokenAddress }}</div>
+                        <div><strong>Chain ID:</strong> {{ token.chainId }}</div>
+                        <div><strong>Buyers (24h):</strong> {{ token.experiencedNetBuyers.oneDay if token.experiencedNetBuyers else '-' }}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="market-data-container">
+                        <div><strong>Price Change (24h):</strong> {{ token.usdPricePercentChange.oneDay if token.usdPricePercentChange else '-' }} %</div>
+                        <div><strong>Volume (24h):</strong> {{ token.volumeUsd.oneDay if token.volumeUsd else '-' }} USD</div>
+                        <div><strong>Liquidity Change (24h):</strong> {{ token.liquidityChangeUSD.oneDay if token.liquidityChangeUSD else '-' }} USD</div>
+                    </div>
+                </td>
+            </tr>
+
+{% endfor %}
+
+        </table>
+    {% endif %}
+
+    {% if analysis %}
+        <h2>🔍 AI Token Analysis</h2>
+        <div class="analysis-container">
+            <p><strong>Orchestrator:</strong> {{ analysis.orchestrator }}</p>
+            <p><strong>Token Address:</strong> {{ analysis.moralis_analysis.token }}</p>
+            <p><strong>USD Price:</strong> {{ analysis.moralis_analysis.usd_price }}</p>
+            <p><strong>Recommended Action:</strong> <span style="color: #bb86fc;">{{ analysis.recommended_action }}</span></p>
+        </div>
+    {% endif %}
+
+</body>
+</html>

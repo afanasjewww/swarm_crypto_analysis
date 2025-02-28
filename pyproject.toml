@@ -1,0 +1,28 @@
+[project]
+name = "swarm-crypto-analysis"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Viktor",email = "61793971+afanasjewww@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic (>=2.10.6,<3.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "openai (>=1.64.0,<2.0.0)",
+    "fastapi (>=0.115.9,<0.116.0)",
+    "uvicorn (>=0.34.0,<0.35.0)",
+    "jinja2 (>=3.1.5,<4.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.32.0"
+pytest = "^8.3.4"
+
