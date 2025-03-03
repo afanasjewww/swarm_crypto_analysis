@@ -151,14 +151,5 @@
             {% endfor %}
         </table>
     {% endif %}
-
-    {% if analysis %}
-        <h2>🔍 AI Token Analysis</h2>
-        <div class="analysis-container">
-            <p><strong>Общий вердикт:</strong> <span style="color: #bb86fc;">{{ analysis.get('decision', 'N/A') }}</span></p>
-            <p><strong>Факторы риска:</strong> {{ analysis.get('risk_factors', 'N/A') }}</p>
-            <p><strong>Основные выводы:</strong> {{ analysis.get('summary', 'N/A') }}</p>
-        </div>
-    {% endif %}
 </body>
 </html>
