@@ -12,10 +12,16 @@ from src.clients.moralis_client import search_tokens
 from src.agents.moralis_agent import MoralisAgent
 from src.agents.orchestrator_agent import OrchestratorAgent
 from src.db.mongo_client import MongoDB, close_mongo_connection
+from src.agents.news_agent import NewsAgent
 
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
 logger = logging.getLogger(__name__)
 
 # Application Lifecycle Management
@@ -109,7 +115,9 @@ async def search(request: Request, query: str = Query(default=""), background_ta
         })
 
 async def run_analysis_pipeline(results):
-    """Runs MoralisAgents asynchronously first, then sends the results to OrchestratorAgent."""
+    """
+    Runs MoralisAgents and NewsAgents asynchronously, then sends the results to OrchestratorAgent.
+    """
     logger.info("Starting background token analysis...")
 
     # Run all token analyses in parallel
@@ -120,27 +128,26 @@ async def run_analysis_pipeline(results):
     for token, analysis in zip(results, analyses):
         token["analysis"] = analysis if isinstance(analysis, str) else "Analysis error, data unavailable."
 
-    logger.info("Token analysis completed. Running final investment decision...")
+    # **Batch tokens for news summarization**
+    batch_size = 3  # Number of tokens per request
+    token_batches = [results[i:i + batch_size] for i in range(0, len(results), batch_size)]
 
-    # Run orchestrator agent in the background
+    news_tasks = [
+        NewsAgent([token["symbol"] for token in batch]).summarize_news()
+        for batch in token_batches
+    ]
+    news_summaries = await asyncio.gather(*news_tasks, return_exceptions=True)
+
+    # Distribute summarized news among tokens
+    for batch, summary in zip(token_batches, news_summaries):
+        for token in batch:
+            token["news_summary"] = summary if isinstance(summary, str) else "No news available."
+
+    logger.info("Running final investment decision...")
+
+    # Run orchestrator agent
     orchestrator = OrchestratorAgent(results)
     final_decisions = await orchestrator.evaluate()
 
-    valid_choices = ["BUY", "HOLD", "AVOID"]
-
-    for token, decision in zip(results, final_decisions):
-        cleaned_decision = decision.strip().upper()
-        token["final_decision"] = cleaned_decision if cleaned_decision in valid_choices else "HOLD"
-
-    report_data = {
-        "date": datetime.now(timezone.utc).isoformat(),
-        "tokens": results
-    }
-
-    # Store results in MongoDB
-    await db_client.save_report(report_data)
-    logger.info(f"Final investment decision stored in MongoDB.")
-
-# Start the FastAPI application with proper shutdown handling
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    await db_client.save_report({"date": datetime.now(timezone.utc).isoformat(), "tokens": results})
+    logger.info("Final investment decision stored in MongoDB.")
