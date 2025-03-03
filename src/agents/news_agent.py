@@ -3,6 +3,8 @@ import logging
 import time
 import requests
 import asyncio
+
+from src.config import config
 from src.utils.swarm_handler import SwarmHandler
 from dotenv import load_dotenv
 
@@ -27,7 +29,7 @@ class NewsAgent:
         Initializes the NewsAgent for fetching and summarizing cryptocurrency-related news.
         """
         self.query = query
-        self.news_api_key = os.getenv("NEWS_API_KEY")
+        self.news_api_key = config.NEWS_API_KEY
         self.swarm = SwarmHandler(
             agent_name="CryptoNewsAgent",
             instructions="You are a financial news analyst. Summarize key news articles relevant to the given cryptocurrency."

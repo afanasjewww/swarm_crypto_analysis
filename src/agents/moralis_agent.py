@@ -1,4 +1,5 @@
 from textwrap import dedent
+from src.config import config
 import logging
 from src.utils.swarm_handler import SwarmHandler
 
