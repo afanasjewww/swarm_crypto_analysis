@@ -13,6 +13,7 @@ from src.agents.moralis_agent import MoralisAgent
 from src.agents.orchestrator_agent import OrchestratorAgent
 from src.db.mongo_client import MongoDB, close_mongo_connection
 from src.agents.news_agent import NewsAgent
+from src.agents.taapi_agent import TAAPIAgent
 
 
 # Configure logging
@@ -116,36 +117,39 @@ async def search(request: Request, query: str = Query(default=""), background_ta
 
 async def run_analysis_pipeline(results):
     """
-    Runs MoralisAgents and NewsAgents asynchronously, then sends the results to OrchestratorAgent.
+    Запускает анализ MoralisAgent, NewsAgent и TAAPIAgent, а затем передает результаты в OrchestratorAgent.
     """
     logger.info("Starting background token analysis...")
 
-    # Run all token analyses in parallel
-    agent_tasks = [MoralisAgent(token).analyze() for token in results]
-    analyses = await asyncio.gather(*agent_tasks, return_exceptions=True)
+    # Анализ MoralisAgent
+    moralis_tasks = [MoralisAgent(token).analyze() for token in results]
+    moralis_analyses = await asyncio.gather(*moralis_tasks, return_exceptions=True)
 
-    # Attach analysis results to tokens
-    for token, analysis in zip(results, analyses):
-        token["analysis"] = analysis if isinstance(analysis, str) else "Analysis error, data unavailable."
+    # Анализ TAAPIAgent
+    taapi_tasks = [TAAPIAgent(token["symbol"]).analyze() for token in results]
+    taapi_analyses = await asyncio.gather(*taapi_tasks, return_exceptions=True)
 
-    # **Batch tokens for news summarization**
-    batch_size = 3  # Number of tokens per request
+    # Добавляем результаты в tokens (ПРОВЕРЯЕМ, ЧТО 'analysis' ВСЕГДА ЕСТЬ)
+    for token, moralis_analysis, taapi_analysis in zip(results, moralis_analyses, taapi_analyses):
+        token["analysis"] = moralis_analysis if isinstance(moralis_analysis, str) else "Analysis not available."
+        token["taapi_analysis"] = taapi_analysis if isinstance(taapi_analysis, str) else "Analysis not available."
+
+    logger.info("Running final investment decision...")
+
+    # Запускаем NewsAgent
+    batch_size = 3
     token_batches = [results[i:i + batch_size] for i in range(0, len(results), batch_size)]
-
-    news_tasks = [
-        NewsAgent([token["symbol"] for token in batch]).summarize_news()
-        for batch in token_batches
-    ]
+    news_tasks = [NewsAgent([token["symbol"] for token in batch]).summarize_news() for batch in token_batches]
     news_summaries = await asyncio.gather(*news_tasks, return_exceptions=True)
 
-    # Distribute summarized news among tokens
+    # Записываем новости в результаты
     for batch, summary in zip(token_batches, news_summaries):
         for token in batch:
             token["news_summary"] = summary if isinstance(summary, str) else "No news available."
 
     logger.info("Running final investment decision...")
 
-    # Run orchestrator agent
+    # Запускаем OrchestratorAgent
     orchestrator = OrchestratorAgent(results)
     final_decisions = await orchestrator.evaluate()
 

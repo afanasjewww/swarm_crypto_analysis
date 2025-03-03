@@ -19,7 +19,14 @@ class MoralisAgent:
         try:
             prompt = self._generate_prompt()
             logger.info(f"Sending prompt to agent: {prompt}")
-            return await self.swarm.run(prompt)
+            result = await self.swarm.run(prompt)
+
+            if not result:
+                logger.warning(f"Empty analysis result for {self.token_info.get('symbol')}")
+                return "Analysis not available."
+
+            return result
+
         except Exception as e:
             logger.error(f"Error analyzing token {self.token_info.get('symbol')}: {e}", exc_info=True)
             return "Analysis error, data unavailable."

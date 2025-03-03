@@ -61,11 +61,12 @@ class OrchestratorAgent:
             return "Final evaluation failed."
 
     def _generate_prompt(self):
-        """Generates a prompt for the final investment decision."""
+        """Генерирует промпт для финального решения."""
         formatted_results = "\n\n".join(
             [
                 f"Token: {token['symbol']} ({token['chainId']})\n"
-                f"Analysis: {token['analysis']}\n"
+                f"Analysis: {token.get('analysis', 'No analysis available')}\n"
+                f"TAAPI Analysis: {token.get('taapi_analysis', 'No TA data available')}\n"
                 f"News Summary: {token.get('news_summary', 'No news available')}"
                 for token in self.token_results
             ]
